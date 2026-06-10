@@ -9,17 +9,17 @@ import java.util.List;
 public class ZeusWebProperties {
 
     /**
-     * Global switch for Zeus web starter features.
+     * Zeus Web Starter 全局开关。
      */
     private boolean enabled = true;
 
     /**
-     * Response wrapping options.
+     * 统一响应包装配置。
      */
     private final ResponseWrap responseWrap = new ResponseWrap();
 
     /**
-     * API log options.
+     * API 访问日志配置。
      */
     private final ApiLog apiLog = new ApiLog();
 
@@ -42,7 +42,7 @@ public class ZeusWebProperties {
     public static class ResponseWrap {
 
         /**
-         * Ant-style request paths that should keep their original response body.
+         * 不进行统一包装的请求路径，支持 Ant 风格匹配表达式。
          */
         private List<String> excludePaths = new ArrayList<>();
 
@@ -58,12 +58,12 @@ public class ZeusWebProperties {
     public static class ApiLog {
 
         /**
-         * Maximum length of a serialized request parameter or response result in one API log.
+         * 单条 API 日志中，请求参数或响应结果序列化后的最大长度。
          */
         private int maxLength = 1000;
 
         /**
-         * Replacement text used for fields annotated with {@code @LogMask}.
+         * {@code @LogMask} 标记字段在日志中的替换文本。
          */
         private String maskText = "***";
 

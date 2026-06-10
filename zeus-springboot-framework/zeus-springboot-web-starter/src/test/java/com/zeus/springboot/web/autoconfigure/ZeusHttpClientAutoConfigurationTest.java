@@ -13,6 +13,9 @@ import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 验证 Zeus HTTP Client 自动配置的 Bean 装配、开关和属性绑定行为。
+ */
 class ZeusHttpClientAutoConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

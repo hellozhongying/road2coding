@@ -22,6 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/**
+ * 验证 API 日志切面的请求/响应记录、客户端 IP 解析和敏感字段脱敏。
+ */
 @ExtendWith(OutputCaptureExtension.class)
 class ApiLogAspectTest {
 
@@ -47,6 +50,7 @@ class ApiLogAspectTest {
         when(joinPoint.proceed()).thenReturn(Map.of("name", "zeus"));
         when(signature.getMethod()).thenReturn(method);
 
+        // 通过 CapturedOutput 直接检查日志内容，确保切面输出包含排查问题所需的关键字段。
         Object result = aspect.logApi(joinPoint, method.getAnnotation(ApiLog.class));
 
         assertThat(result).isEqualTo(Map.of("name", "zeus"));
@@ -72,6 +76,7 @@ class ApiLogAspectTest {
         when(joinPoint.proceed()).thenReturn(request);
         when(signature.getMethod()).thenReturn(method);
 
+        // token 被 @LogMask 标记，应在入参与返回值日志中同时脱敏。
         maskedAspect.logApi(joinPoint, method.getAnnotation(ApiLog.class));
 
         assertThat(output).contains("\"token\":\"***\"");

@@ -13,6 +13,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 验证请求 ID 过滤器会正确写入 MDC、响应头，并在请求结束后清理线程上下文。
+ */
 class RequestIdMdcFilterTest {
 
     private final RequestIdMdcFilter filter = new RequestIdMdcFilter();

@@ -1,5 +1,10 @@
 package com.zeus.springboot.web.exception;
 
+/**
+ * Starter 内置的通用错误码。
+ *
+ * <p>业务系统可以直接复用这些错误码，也可以实现 {@link ErrorCode} 扩展自己的错误码枚举。</p>
+ */
 public enum CommonErrorCode implements ErrorCode {
 
     PARAM_ERROR("400", "参数错误"),

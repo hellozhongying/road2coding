@@ -16,6 +16,11 @@ import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+/**
+ * Zeus HTTP Client 自动配置。
+ *
+ * <p>当 Spring {@link RestClient} 和 Apache HttpClient 5 都存在时，自动提供带连接池的 HTTP 调用能力。</p>
+ */
 @AutoConfiguration(after = RestClientAutoConfiguration.class)
 @ConditionalOnClass({RestClient.class, CloseableHttpClient.class})
 @ConditionalOnProperty(prefix = "zeus.http-client", name = "enabled", havingValue = "true", matchIfMissing = true)

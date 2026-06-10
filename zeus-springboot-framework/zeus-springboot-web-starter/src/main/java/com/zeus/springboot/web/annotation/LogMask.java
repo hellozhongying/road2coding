@@ -7,7 +7,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Masks a field or JavaBean getter when {@link ApiLog} serializes request parameters or response results.
+ * 标记日志中需要脱敏的字段或 JavaBean getter。
+ *
+ * <p>{@link ApiLog} 序列化请求参数和响应结果时，会把被标记成员替换为配置的掩码文本。</p>
  */
 @Documented
 @Target({ElementType.FIELD, ElementType.METHOD})

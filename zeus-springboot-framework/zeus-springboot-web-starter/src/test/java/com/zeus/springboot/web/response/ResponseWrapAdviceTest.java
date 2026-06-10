@@ -28,6 +28,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * 验证统一响应包装、忽略包装和异常响应结构。
+ */
 class ResponseWrapAdviceTest {
 
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new TestController())
@@ -48,6 +51,7 @@ class ResponseWrapAdviceTest {
 
     @Test
     void wrapsStringResponse() throws Exception {
+        // String 返回值会走 StringHttpMessageConverter，需要额外确认仍然输出 JSON 结构。
         mockMvc.perform(get("/string"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))

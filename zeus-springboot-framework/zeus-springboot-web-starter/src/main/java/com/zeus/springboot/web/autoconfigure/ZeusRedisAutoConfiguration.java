@@ -20,6 +20,11 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+/**
+ * RedisTemplate 自动配置。
+ *
+ * <p>在业务未自定义 {@code redisTemplate} 时，提供 key 为字符串、value 为 JSON 的通用 RedisTemplate。</p>
+ */
 @AutoConfiguration
 @AutoConfigureAfter(name = {
         "org.springframework.boot.autoconfigure.data.redis.LettuceConnectionConfiguration",
@@ -29,6 +34,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 @ConditionalOnClass({RedisOperations.class, RedisProperties.class})
 public class ZeusRedisAutoConfiguration {
 
+    /**
+     * 创建默认 RedisTemplate，覆盖 Spring Boot 默认的 JDK 序列化体验。
+     */
     @Bean(name = "redisTemplate")
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnSingleCandidate(RedisConnectionFactory.class)
@@ -52,6 +60,7 @@ public class ZeusRedisAutoConfiguration {
     private RedisSerializer<Object> jsonRedisSerializer(ObjectMapper objectMapper) {
         ObjectMapper redisObjectMapper = objectMapper.copy();
         GenericJackson2JsonRedisSerializer.registerNullValueSerializer(redisObjectMapper, null);
+        // 写入类型信息，保证 Object 类型 value 反序列化时能恢复实际 Java 类型。
         redisObjectMapper.activateDefaultTypingAsProperty(
                 BasicPolymorphicTypeValidator.builder().allowIfSubType(Object.class).build(),
                 ObjectMapper.DefaultTyping.EVERYTHING,

@@ -23,6 +23,11 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * {@link ApiLog} 注解的日志切面。
+ *
+ * <p>围绕 Controller 方法记录请求开始、正常完成和异常失败三类日志，并在输出前进行敏感字段脱敏。</p>
+ */
 @Aspect
 public class ApiLogAspect {
 
@@ -56,6 +61,7 @@ public class ApiLogAspect {
         String clientIp = getClientIp();
         String parameters = toJson(filterArguments(joinPoint.getArgs()));
 
+        // 请求开始和结束分开记录，便于定位慢请求和失败请求发生在链路中的哪个阶段。
         log.info(truncate("Api request started. name=%s, clientIp=%s, parameters=%s"
                 .formatted(apiName, clientIp, parameters)));
         try {
@@ -76,6 +82,7 @@ public class ApiLogAspect {
         if (StringUtils.hasText(apiLog.value())) {
             return apiLog.value();
         }
+        // 未显式指定名称时，使用稳定的方法签名作为日志名称。
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Method method = signature.getMethod();
         return method.getDeclaringClass().getSimpleName() + "#" + method.getName();
@@ -89,6 +96,7 @@ public class ApiLogAspect {
 
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (StringUtils.hasText(xForwardedFor) && !UNKNOWN_IP.equalsIgnoreCase(xForwardedFor)) {
+            // 经过多级代理时，X-Forwarded-For 第一个 IP 通常是原始客户端 IP。
             return xForwardedFor.split(",")[0].trim();
         }
 
@@ -122,6 +130,7 @@ public class ApiLogAspect {
     }
 
     private boolean shouldLogArgument(Object arg) {
+        // Servlet 原生对象和上传文件不适合直接序列化进日志，避免冗余输出或触发不可预期的读取。
         return !(arg instanceof ServletRequest
                 || arg instanceof ServletResponse
                 || arg instanceof MultipartFile);
@@ -134,6 +143,7 @@ public class ApiLogAspect {
         try {
             return truncate(objectMapper.writeValueAsString(logValueSanitizer.sanitize(value)));
         } catch (JsonProcessingException ex) {
+            // 序列化失败时退化为 toString，保证日志切面不影响业务请求执行。
             return truncate(String.valueOf(value));
         }
     }

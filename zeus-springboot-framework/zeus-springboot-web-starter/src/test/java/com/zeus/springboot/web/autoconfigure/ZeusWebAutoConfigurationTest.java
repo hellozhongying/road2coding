@@ -18,6 +18,9 @@ import org.springframework.http.ResponseEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * 验证 Zeus Web 核心自动配置的默认装配、开关退让和默认环境属性。
+ */
 class ZeusWebAutoConfigurationTest {
 
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()

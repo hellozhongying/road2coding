@@ -14,6 +14,11 @@ import java.lang.reflect.Modifier;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
+/**
+ * API 日志值脱敏器。
+ *
+ * <p>在保留对象结构的前提下，递归处理集合、数组、Map 和普通对象，并替换 {@link LogMask} 标记的成员。</p>
+ */
 class LogValueSanitizer {
 
     private final ObjectMapper objectMapper;
@@ -34,6 +39,7 @@ class LogValueSanitizer {
             return value;
         }
         if (visited.containsKey(value)) {
+            // 对象图存在循环引用时停止递归，避免日志序列化栈溢出。
             return String.valueOf(value);
         }
         visited.put(value, Boolean.TRUE);
@@ -62,6 +68,7 @@ class LogValueSanitizer {
         }
 
         ObjectNode node = objectMapper.valueToTree(value);
+        // Jackson 先生成基础 JSON，再用反射递归替换字段值，以便嵌套对象同样应用脱敏规则。
         sanitizeFields(value, node, visited);
         maskAnnotatedMembers(value.getClass(), node);
         return node;
@@ -80,7 +87,7 @@ class LogValueSanitizer {
                         objectNode.set(resolveJsonName(field), objectMapper.valueToTree(sanitize(fieldValue, visited)));
                     }
                 } catch (IllegalAccessException ignored) {
-                    // If reflection access fails, keep Jackson's original serialized value.
+                    // 反射访问失败时保留 Jackson 原始序列化值，避免日志脱敏流程影响主链路。
                 }
             }
         }
@@ -90,6 +97,7 @@ class LogValueSanitizer {
         if (!(node instanceof ObjectNode objectNode)) {
             return;
         }
+        // 字段和 getter 都支持 @LogMask，便于适配字段访问和 JavaBean 两种模型。
         for (Class<?> current = valueType; current != null && current != Object.class; current = current.getSuperclass()) {
             maskAnnotatedFields(current, objectNode);
             maskAnnotatedGetters(current, objectNode);

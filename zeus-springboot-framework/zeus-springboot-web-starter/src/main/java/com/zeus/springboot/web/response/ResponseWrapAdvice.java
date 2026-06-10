@@ -17,6 +17,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import java.util.List;
 
+/**
+ * Controller 响应体统一包装处理器。
+ *
+ * <p>除显式忽略或配置排除的接口外，会把原始返回值包装为 {@link Result}，形成稳定的前后端响应契约。</p>
+ */
 @RestControllerAdvice
 public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
 
@@ -38,6 +43,7 @@ public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
     @Override
     public boolean supports(MethodParameter returnType,
                             Class<? extends HttpMessageConverter<?>> converterType) {
+        // 类或方法上标记 @IgnoreResponseWrap 时，完全跳过统一响应包装。
         return !returnType.hasMethodAnnotation(IgnoreResponseWrap.class)
                 && !returnType.getContainingClass().isAnnotationPresent(IgnoreResponseWrap.class);
     }
@@ -59,6 +65,7 @@ public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
         Result<Object> result = Result.success(body, RequestIdHolder.currentRequestId());
         if (StringHttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
             try {
+                // StringHttpMessageConverter 只能写字符串，这里手动转 JSON 并修正响应类型。
                 response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
                 return objectMapper.writeValueAsString(result);
             } catch (JsonProcessingException exception) {

@@ -18,6 +18,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+/**
+ * 验证 RedisTemplate 自动配置在默认、用户覆盖和缺失依赖场景下的行为。
+ */
 class ZeusRedisAutoConfigurationTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
@@ -59,6 +62,7 @@ class ZeusRedisAutoConfigurationTest {
             @SuppressWarnings("unchecked")
             RedisSerializer<Object> valueSerializer = (RedisSerializer<Object>) redisTemplate.getValueSerializer();
 
+            // 序列化器需要保留类型信息，才能从 Object value 中还原为实际业务对象。
             SampleUser user = (SampleUser) valueSerializer.deserialize(valueSerializer.serialize(new SampleUser("zeus", 18)));
 
             assertThat(user.name()).isEqualTo("zeus");

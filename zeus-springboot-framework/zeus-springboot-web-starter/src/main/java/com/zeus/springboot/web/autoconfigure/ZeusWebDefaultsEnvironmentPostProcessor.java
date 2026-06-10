@@ -9,6 +9,11 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.MutablePropertySources;
 
+/**
+ * 为 Web 应用注入一组温和的默认配置。
+ *
+ * <p>默认属性以最低优先级加入，业务应用在 application.yml 中显式配置时会自然覆盖这些值。</p>
+ */
 public class ZeusWebDefaultsEnvironmentPostProcessor implements EnvironmentPostProcessor, Ordered {
 
     static final String PROPERTY_SOURCE_NAME = "zeusWebDefaults";
@@ -24,6 +29,7 @@ public class ZeusWebDefaultsEnvironmentPostProcessor implements EnvironmentPostP
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
         MutablePropertySources propertySources = environment.getPropertySources();
         if (!propertySources.contains(PROPERTY_SOURCE_NAME)) {
+            // 放在最后，保证用户配置、环境变量、命令行参数等更高优先级配置都能覆盖默认值。
             propertySources.addLast(new MapPropertySource(PROPERTY_SOURCE_NAME, DEFAULT_PROPERTIES));
         }
     }
