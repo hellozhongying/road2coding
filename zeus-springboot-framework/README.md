@@ -49,6 +49,7 @@ mvn clean install
 | 日志追踪 | 自动将 requestId 写入 MDC，日志格式默认输出 requestId，便于按请求追踪日志链路。 |
 | 接口日志 | 通过 `@ApiLog` 记录接口名称、客户端 IP、请求参数、返回结果、耗时和异常。 |
 | Redis 对象 JSON 序列化 | 业务项目引入 Redis 组件时，默认 `RedisTemplate` 支持对象 JSON 存取。 |
+| 常用工具依赖 | 内置 `commons-lang3`、`commons-collections4`、`commons-io` 和 `guava`，覆盖字符串、集合、IO 与 Guava 增强工具。 |
 
 ## 自动配置说明
 
