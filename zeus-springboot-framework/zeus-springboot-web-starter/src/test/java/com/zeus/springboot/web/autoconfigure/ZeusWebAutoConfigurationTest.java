@@ -12,6 +12,7 @@ import com.zeus.springboot.web.response.Result;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
+import org.springframework.mock.env.MockEnvironment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
@@ -85,5 +86,33 @@ class ZeusWebAutoConfigurationTest {
         assertThat(response.getBody().data()).isNull();
         assertThat(response.getBody().requestId()).isNotBlank();
         assertThat(response.getBody().timestamp()).isNotNull();
+    }
+
+    @Test
+    void providesWebServerDefaults() {
+        MockEnvironment environment = new MockEnvironment();
+
+        new ZeusWebDefaultsEnvironmentPostProcessor().postProcessEnvironment(environment, null);
+
+        assertThat(environment.getProperty("server.port")).isEqualTo("8080");
+        assertThat(environment.getProperty("server.tomcat.threads.max")).isEqualTo("50");
+        assertThat(environment.getProperty("server.tomcat.threads.min-spare")).isEqualTo("5");
+        assertThat(environment.getProperty("server.shutdown")).isEqualTo("graceful");
+    }
+
+    @Test
+    void backsOffWebServerDefaultsWhenApplicationProvidesValues() {
+        MockEnvironment environment = new MockEnvironment()
+                .withProperty("server.port", "9090")
+                .withProperty("server.tomcat.threads.max", "100")
+                .withProperty("server.tomcat.threads.min-spare", "10")
+                .withProperty("server.shutdown", "immediate");
+
+        new ZeusWebDefaultsEnvironmentPostProcessor().postProcessEnvironment(environment, null);
+
+        assertThat(environment.getProperty("server.port")).isEqualTo("9090");
+        assertThat(environment.getProperty("server.tomcat.threads.max")).isEqualTo("100");
+        assertThat(environment.getProperty("server.tomcat.threads.min-spare")).isEqualTo("10");
+        assertThat(environment.getProperty("server.shutdown")).isEqualTo("immediate");
     }
 }
