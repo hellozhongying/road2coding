@@ -48,15 +48,17 @@ mvn clean install
 | 请求 ID | 从 `X-Request-Id` 请求头读取请求 ID；不存在时自动生成 UUID。 |
 | 日志追踪 | 自动将 requestId 写入 MDC，日志格式默认输出 requestId，便于按请求追踪日志链路。 |
 | 接口日志 | 通过 `@ApiLog` 记录接口名称、客户端 IP、请求参数、返回结果、耗时和异常。 |
+| Redis 对象 JSON 序列化 | 业务项目引入 Redis 组件时，默认 `RedisTemplate` 支持对象 JSON 存取。 |
 
 ## 自动配置说明
 
-starter 仅在 Servlet Web 应用中生效，并要求 classpath 中存在 `DispatcherServlet`。
+Web 自动配置仅在 Servlet Web 应用中生效，并要求 classpath 中存在 `DispatcherServlet`；Redis 自动配置仅在业务项目引入 Redis 组件时生效。
 
 自动配置类为：
 
 ```text
 com.zeus.springboot.web.autoconfigure.ZeusWebAutoConfiguration
+com.zeus.springboot.web.autoconfigure.ZeusRedisAutoConfiguration
 ```
 
 自动装配的 Bean 包括：
@@ -70,6 +72,23 @@ com.zeus.springboot.web.autoconfigure.ZeusWebAutoConfiguration
 | `ApiLogAspect` | 存在 `ObjectMapper`，且 `zeus.web.enabled=true` 时创建 | 提供 `@ApiLog` 切面日志。 |
 
 所有自动配置 Bean 都使用 `@ConditionalOnMissingBean`，业务系统可以通过声明同类型 Bean 覆盖默认实现。
+
+### Redis 自动配置
+
+Redis 能力是可选能力。业务项目没有引入 Redis 组件时，starter 不会要求业务项目强制引入 Redis 依赖，也不会注册 Redis 相关 Bean。
+
+当业务项目同时引入 `spring-boot-starter-data-redis` 且容器中存在 `RedisConnectionFactory` 和 `ObjectMapper` 时，starter 会在缺失名为 `redisTemplate` 的 Bean 时提供默认 `RedisTemplate`：
+
+| 配置项 | 默认行为 |
+| --- | --- |
+| key serializer | `StringRedisSerializer` |
+| hash key serializer | `StringRedisSerializer` |
+| value serializer | `GenericJackson2JsonRedisSerializer` |
+| hash value serializer | `GenericJackson2JsonRedisSerializer` |
+
+因此业务代码可以直接注入 `RedisTemplate<String, T>` 存取任意用户定义对象。对象会以 JSON 字符串形式写入 Redis，读取时由 Jackson 自动反序列化为对应 Java 对象。
+
+如果业务系统需要完全自定义 Redis 序列化方式，可以声明名为 `redisTemplate` 的 Bean 覆盖 starter 默认实现。
 
 ## 配置项说明
 
