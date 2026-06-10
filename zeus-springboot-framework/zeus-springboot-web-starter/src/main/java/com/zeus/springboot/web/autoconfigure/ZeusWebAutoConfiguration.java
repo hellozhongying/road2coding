@@ -45,15 +45,15 @@ public class ZeusWebAutoConfiguration {
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "zeus.web", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public ResponseWrapAdvice responseWrapAdvice(ObjectMapper objectMapper) {
-        return new ResponseWrapAdvice(objectMapper);
+    public ResponseWrapAdvice responseWrapAdvice(ObjectMapper objectMapper, ZeusWebProperties properties) {
+        return new ResponseWrapAdvice(objectMapper, properties);
     }
 
     @Bean
     @ConditionalOnBean(ObjectMapper.class)
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "zeus.web", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public ApiLogAspect apiLogAspect(ObjectMapper objectMapper) {
-        return new ApiLogAspect(objectMapper);
+    public ApiLogAspect apiLogAspect(ObjectMapper objectMapper, ZeusWebProperties properties) {
+        return new ApiLogAspect(objectMapper, properties);
     }
 }

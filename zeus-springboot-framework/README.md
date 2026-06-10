@@ -45,9 +45,11 @@ mvn clean install
 | 跳过响应包装 | 通过 `@IgnoreResponseWrap` 在类或方法级别跳过统一响应包装。 |
 | 全局异常处理 | 内置 `GlobalExceptionHandler`，统一处理 `ParamException`、`ServiceException` 和其他未捕获异常。 |
 | 错误码契约 | 通过 `ErrorCode` 接口约定业务错误码和错误信息。 |
+| 参数校验异常处理 | 统一处理 `@Valid`、绑定失败和方法参数约束异常，返回标准 `Result` 错误响应。 |
 | 请求 ID | 从 `X-Request-Id` 请求头读取请求 ID；不存在时自动生成 UUID。 |
 | 日志追踪 | 自动将 requestId 写入 MDC，日志格式默认输出 requestId，便于按请求追踪日志链路。 |
 | 接口日志 | 通过 `@ApiLog` 记录接口名称、客户端 IP、请求参数、返回结果、耗时和异常。 |
+| 日志脱敏与限长 | 通过 `@LogMask` 标记敏感字段，接口日志默认替换为 `***`，单段日志值默认最多输出 1000 字符。 |
 | Redis 对象 JSON 序列化 | 业务项目引入 Redis 组件时，默认 `RedisTemplate` 支持对象 JSON 存取。 |
 | HTTP Client | 默认提供基于 Spring `RestClient` 和 Apache HttpClient 5 的连接池 HTTP 客户端，并内置简单 GET/POST 工具类。 |
 | 常用工具依赖 | 内置 `commons-lang3`、`commons-collections4`、`commons-io` 和 `guava`，覆盖字符串、集合、IO 与 Guava 增强工具。 |
@@ -159,6 +161,9 @@ private RestClient zeusRestClient;
 | 配置项 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `zeus.web.enabled` | `boolean` | `true` | Zeus Web starter 功能总开关。为 `false` 时，不会注册统一响应包装 `ResponseWrapAdvice` 和接口日志切面 `ApiLogAspect`；全局异常处理器仍会注册。 |
+| `zeus.web.response-wrap.exclude-paths` | `List<String>` | 空列表 | 跳过统一响应包装的 Ant 风格路径，例如 `/actuator/**`。 |
+| `zeus.web.api-log.max-length` | `int` | `1000` | `@ApiLog` 单条日志消息的最大长度，同时限制请求参数或响应结果的序列化长度。配置小于等于 0 时回退为 1000。 |
+| `zeus.web.api-log.mask-text` | `String` | `***` | `@LogMask` 标记字段在接口日志中的替换文本。空值会回退为 `***`。 |
 
 示例：
 
@@ -166,6 +171,14 @@ private RestClient zeusRestClient;
 zeus:
   web:
     enabled: true
+    response-wrap:
+      exclude-paths:
+        - /actuator/**
+        - /v3/api-docs/**
+        - /swagger-ui/**
+    api-log:
+      max-length: 1000
+      mask-text: "***"
 ```
 
 关闭统一响应包装和接口日志切面：
@@ -281,6 +294,18 @@ public class FileController {
 }
 ```
 
+也可以通过配置批量跳过统一响应包装，适合健康检查、API 文档、文件下载等框架接口：
+
+```yaml
+zeus:
+  web:
+    response-wrap:
+      exclude-paths:
+        - /actuator/**
+        - /v3/api-docs/**
+        - /swagger-ui/**
+```
+
 ## 全局异常处理
 
 starter 内置以下异常处理规则：
@@ -288,6 +313,9 @@ starter 内置以下异常处理规则：
 | 异常类型 | HTTP 状态码 | 响应错误码来源 |
 | --- | --- | --- |
 | `ParamException` | `400 Bad Request` | 异常中携带的 `ErrorCode` |
+| `MethodArgumentNotValidException` | `400 Bad Request` | `CommonErrorCode.PARAM_ERROR` |
+| `BindException` | `400 Bad Request` | `CommonErrorCode.PARAM_ERROR` |
+| `ConstraintViolationException` | `400 Bad Request` | `CommonErrorCode.PARAM_ERROR` |
 | `ServiceException` | `500 Internal Server Error` | 异常中携带的 `ErrorCode` |
 | 其他 `Exception` | `500 Internal Server Error` | `CommonErrorCode.SYSTEM_ERROR` |
 
@@ -470,6 +498,43 @@ public Long createUser(@RequestBody CreateUserRequest request) {
 - `ServletResponse`
 - `MultipartFile`
 
+### 日志脱敏
+
+在请求参数或响应结果对象的字段、JavaBean getter 上添加 `@LogMask`，接口日志会将该属性替换为 `***`。
+
+```java
+public class CreateUserRequest {
+
+    private String username;
+
+    @LogMask
+    private String password;
+
+    @LogMask
+    private String token;
+
+    // getters/setters
+}
+```
+
+示例日志片段：
+
+```text
+parameters=[{"username":"zeus","password":"***","token":"***"}]
+```
+
+替换文本和日志长度可以通过配置调整：
+
+```yaml
+zeus:
+  web:
+    api-log:
+      mask-text: "***"
+      max-length: 1000
+```
+
+`max-length` 会限制 `@ApiLog` 的单条日志消息长度，也会限制序列化后的请求参数集合或响应结果长度，默认最多输出 1000 字符，避免大对象、长文本或异常响应把接口日志撑得过长。
+
 ## 覆盖默认实现
 
 如果业务系统需要定制默认行为，可以声明同类型 Bean 覆盖 starter 自动配置。
@@ -509,5 +574,6 @@ mvn test
 
 - 该 starter 仅支持 Spring MVC Servlet Web 应用，不适用于 WebFlux 应用。
 - `zeus.web.enabled=false` 只关闭统一响应包装和 `@ApiLog` 切面，不关闭全局异常处理。
-- `@ApiLog` 会记录请求参数和返回结果，请避免在敏感接口中直接记录密码、密钥、令牌等敏感信息。
+- `@ApiLog` 会记录请求参数和返回结果，敏感字段请使用 `@LogMask` 标记；不适合记录的接口可以不添加 `@ApiLog`。
+- 健康检查、Swagger/OpenAPI 文档、文件下载等原始响应接口，建议通过 `zeus.web.response-wrap.exclude-paths` 或 `@IgnoreResponseWrap` 跳过统一包装。
 - 如果业务应用没有可用的 `ObjectMapper` Bean，统一响应包装和接口日志切面不会自动注册。

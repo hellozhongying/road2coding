@@ -3,22 +3,36 @@ package com.zeus.springboot.web.response;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeus.springboot.web.annotation.IgnoreResponseWrap;
+import com.zeus.springboot.web.autoconfigure.ZeusWebProperties;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+
+import java.util.List;
 
 @RestControllerAdvice
 public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
 
     private final ObjectMapper objectMapper;
 
+    private final List<String> excludePaths;
+
+    private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
     public ResponseWrapAdvice(ObjectMapper objectMapper) {
+        this(objectMapper, new ZeusWebProperties());
+    }
+
+    public ResponseWrapAdvice(ObjectMapper objectMapper, ZeusWebProperties properties) {
         this.objectMapper = objectMapper;
+        this.excludePaths = properties.getResponseWrap().getExcludePaths();
     }
 
     @Override
@@ -35,6 +49,9 @@ public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request,
                                   ServerHttpResponse response) {
+        if (isExcludedPath(request)) {
+            return body;
+        }
         if (body instanceof Result<?>) {
             return body;
         }
@@ -49,5 +66,13 @@ public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
             }
         }
         return result;
+    }
+
+    private boolean isExcludedPath(ServerHttpRequest request) {
+        if (CollectionUtils.isEmpty(excludePaths)) {
+            return false;
+        }
+        String path = request.getURI().getPath();
+        return excludePaths.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
     }
 }

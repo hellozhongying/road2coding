@@ -2,6 +2,8 @@ package com.zeus.springboot.web.log;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeus.springboot.web.annotation.ApiLog;
+import com.zeus.springboot.web.annotation.LogMask;
+import com.zeus.springboot.web.autoconfigure.ZeusWebProperties;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.AfterEach;
@@ -55,11 +57,66 @@ class ApiLogAspectTest {
         assertThat(output).contains("costTime=");
     }
 
+    @Test
+    void masksAnnotatedFieldsAndTruncatesLongLogValues(CapturedOutput output) throws Throwable {
+        ZeusWebProperties properties = new ZeusWebProperties();
+        properties.getApiLog().setMaxLength(1000);
+        ApiLogAspect maskedAspect = new ApiLogAspect(new ObjectMapper(), properties);
+
+        Method method = TestController.class.getMethod("save", SaveUserRequest.class);
+        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+        MethodSignature signature = mock(MethodSignature.class);
+        SaveUserRequest request = new SaveUserRequest("zeus", "secret-token", "x".repeat(1200));
+        when(joinPoint.getArgs()).thenReturn(new Object[]{request});
+        when(joinPoint.getSignature()).thenReturn(signature);
+        when(joinPoint.proceed()).thenReturn(request);
+        when(signature.getMethod()).thenReturn(method);
+
+        maskedAspect.logApi(joinPoint, method.getAnnotation(ApiLog.class));
+
+        assertThat(output).contains("\"token\":\"***\"");
+        assertThat(output).doesNotContain("secret-token");
+        assertThat(output).doesNotContain("x".repeat(1001));
+    }
+
     static class TestController {
 
         @ApiLog("Query API")
         public Map<String, String> query(String name) {
             return Map.of("name", name);
+        }
+
+        @ApiLog("Save User")
+        public SaveUserRequest save(SaveUserRequest request) {
+            return request;
+        }
+    }
+
+    static class SaveUserRequest {
+
+        private final String name;
+
+        @LogMask
+        private final String token;
+
+        private final String description;
+
+        SaveUserRequest(String name, String token, String description) {
+            this.name = name;
+            this.token = token;
+            this.description = description;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getToken() {
+            return token;
+        }
+
+        public String getDescription() {
+            return description;
         }
     }
 }
