@@ -6,7 +6,7 @@ Zeus Spring Boot Framework 是一组面向 Spring Boot 应用的 starter 集合�
 
 | 模块 | 说明 |
 | --- | --- |
-| `zeus-springboot-web-starter` | 面向 Servlet Web 应用的基础 starter，提供统一响应、全局异常处理、请求 ID 和接口日志能力。 |
+| `zeus-springboot-web-starter` | 面向 Servlet Web 应用的基础 starter，提供统一响应、全局异常处理、请求 ID、接口日志、Redis 序列化和 HTTP Client 能力。 |
 
 ## 环境要求
 
@@ -49,6 +49,7 @@ mvn clean install
 | 日志追踪 | 自动将 requestId 写入 MDC，日志格式默认输出 requestId，便于按请求追踪日志链路。 |
 | 接口日志 | 通过 `@ApiLog` 记录接口名称、客户端 IP、请求参数、返回结果、耗时和异常。 |
 | Redis 对象 JSON 序列化 | 业务项目引入 Redis 组件时，默认 `RedisTemplate` 支持对象 JSON 存取。 |
+| HTTP Client | 默认提供基于 Spring `RestClient` 和 Apache HttpClient 5 的连接池 HTTP 客户端，并内置简单 GET/POST 工具类。 |
 | 常用工具依赖 | 内置 `commons-lang3`、`commons-collections4`、`commons-io` 和 `guava`，覆盖字符串、集合、IO 与 Guava 增强工具。 |
 
 ## 自动配置说明
@@ -60,6 +61,7 @@ Web 自动配置仅在 Servlet Web 应用中生效，并要求 classpath 中存�
 ```text
 com.zeus.springboot.web.autoconfigure.ZeusWebAutoConfiguration
 com.zeus.springboot.web.autoconfigure.ZeusRedisAutoConfiguration
+com.zeus.springboot.web.autoconfigure.ZeusHttpClientAutoConfiguration
 ```
 
 自动装配的 Bean 包括：
@@ -71,6 +73,10 @@ com.zeus.springboot.web.autoconfigure.ZeusRedisAutoConfiguration
 | `RequestIdMdcFilter` | 缺失同类型 Bean 时创建 | 将请求 ID 写入 MDC，并回写 `X-Request-Id` 响应头。 |
 | `ResponseWrapAdvice` | 存在 `ObjectMapper`，且 `zeus.web.enabled=true` 时创建 | 提供统一响应包装。 |
 | `ApiLogAspect` | 存在 `ObjectMapper`，且 `zeus.web.enabled=true` 时创建 | 提供 `@ApiLog` 切面日志。 |
+| `CloseableHttpClient` | 缺失名为 `zeusCloseableHttpClient` 的 Bean 时创建 | 提供 Apache HttpClient 5 连接池客户端。 |
+| `ClientHttpRequestFactory` | 缺失名为 `zeusClientHttpRequestFactory` 的 Bean 时创建 | 将 Apache HttpClient 5 接入 Spring HTTP 调用。 |
+| `RestClient` | 缺失名为 `zeusRestClient` 的 Bean 时创建 | 提供 starter 默认同步 HTTP 客户端。 |
+| `ZeusHttpClient` | 缺失同类型 Bean 时创建 | 提供简单 GET 和 JSON POST 调用工具。 |
 
 所有自动配置 Bean 都使用 `@ConditionalOnMissingBean`，业务系统可以通过声明同类型 Bean 覆盖默认实现。
 
@@ -90,6 +96,61 @@ Redis 能力是可选能力。业务项目没有引入 Redis 组件时，starter
 因此业务代码可以直接注入 `RedisTemplate<String, T>` 存取任意用户定义对象。对象会以 JSON 字符串形式写入 Redis，读取时由 Jackson 自动反序列化为对应 Java 对象。
 
 如果业务系统需要完全自定义 Redis 序列化方式，可以声明名为 `redisTemplate` 的 Bean 覆盖 starter 默认实现。
+
+### HTTP Client 自动配置
+
+HTTP Client 能力默认开启。starter 会创建一个基于 Apache HttpClient 5 连接池的 Spring `RestClient`，并额外提供 `ZeusHttpClient` 用于简单 GET 和 JSON POST 请求。
+
+默认连接池和超时配置：
+
+| 配置项 | 默认值 |
+| --- | --- |
+| max total connections | `200` |
+| max connections per route | `50` |
+| connect timeout | `3s` |
+| connection request timeout | `3s` |
+| read timeout | `10s` |
+
+业务代码可以直接注入 `ZeusHttpClient`：
+
+```java
+@Service
+public class RemoteUserService {
+
+    private final ZeusHttpClient zeusHttpClient;
+
+    public RemoteUserService(ZeusHttpClient zeusHttpClient) {
+        this.zeusHttpClient = zeusHttpClient;
+    }
+
+    public UserDetail getUser(Long id) {
+        return zeusHttpClient.get("https://example.com/users/" + id, UserDetail.class);
+    }
+
+    public CreateUserResponse createUser(CreateUserRequest request) {
+        return zeusHttpClient.postJson(
+                "https://example.com/users",
+                request,
+                CreateUserResponse.class);
+    }
+}
+```
+
+如果需要使用更完整的 Spring `RestClient` API，可以注入名为 `zeusRestClient` 的 Bean：
+
+```java
+@Resource(name = "zeusRestClient")
+private RestClient zeusRestClient;
+```
+
+业务系统需要完全自定义默认 HTTP 客户端时，可以声明以下 Bean 覆盖 starter 默认实现：
+
+| Bean 名称或类型 | 覆盖内容 |
+| --- | --- |
+| `zeusCloseableHttpClient` | 自定义 Apache HttpClient 5 客户端。 |
+| `zeusClientHttpRequestFactory` | 自定义 Spring `ClientHttpRequestFactory`。 |
+| `zeusRestClient` | 自定义 starter 默认 `RestClient`。 |
+| `ZeusHttpClient` 类型 Bean | 自定义工具类实现。 |
 
 ## 配置项说明
 
@@ -113,6 +174,30 @@ zeus:
 zeus:
   web:
     enabled: false
+```
+
+HTTP Client 配置前缀：`zeus.http-client`
+
+| 配置项 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `zeus.http-client.enabled` | `boolean` | `true` | HTTP Client 自动配置开关。 |
+| `zeus.http-client.max-total` | `int` | `200` | 连接池最大总连接数。 |
+| `zeus.http-client.max-per-route` | `int` | `50` | 单个路由最大连接数。 |
+| `zeus.http-client.connect-timeout` | `Duration` | `3s` | 建立连接超时时间。 |
+| `zeus.http-client.connection-request-timeout` | `Duration` | `3s` | 从连接池获取连接的超时时间。 |
+| `zeus.http-client.read-timeout` | `Duration` | `10s` | 读取响应超时时间。 |
+
+示例：
+
+```yaml
+zeus:
+  http-client:
+    enabled: true
+    max-total: 300
+    max-per-route: 80
+    connect-timeout: 5s
+    connection-request-timeout: 2s
+    read-timeout: 20s
 ```
 
 ## 统一响应
