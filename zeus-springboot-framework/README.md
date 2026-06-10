@@ -46,6 +46,7 @@ mvn clean install
 | 全局异常处理 | 内置 `GlobalExceptionHandler`，统一处理 `ParamException`、`ServiceException` 和其他未捕获异常。 |
 | 错误码契约 | 通过 `ErrorCode` 接口约定业务错误码和错误信息。 |
 | 请求 ID | 从 `X-Request-Id` 请求头读取请求 ID；不存在时自动生成 UUID。 |
+| 日志追踪 | 自动将 requestId 写入 MDC，日志格式默认输出 requestId，便于按请求追踪日志链路。 |
 | 接口日志 | 通过 `@ApiLog` 记录接口名称、客户端 IP、请求参数、返回结果、耗时和异常。 |
 
 ## 自动配置说明
@@ -64,6 +65,7 @@ com.zeus.springboot.web.autoconfigure.ZeusWebAutoConfiguration
 | --- | --- | --- |
 | `ZeusWebMarker` | 缺失同类型 Bean 时创建 | 标记 starter 是否启用。 |
 | `GlobalExceptionHandler` | 缺失同类型 Bean 时创建 | 提供全局异常处理。 |
+| `RequestIdMdcFilter` | 缺失同类型 Bean 时创建 | 将请求 ID 写入 MDC，并回写 `X-Request-Id` 响应头。 |
 | `ResponseWrapAdvice` | 存在 `ObjectMapper`，且 `zeus.web.enabled=true` 时创建 | 提供统一响应包装。 |
 | `ApiLogAspect` | 存在 `ObjectMapper`，且 `zeus.web.enabled=true` 时创建 | 提供 `@ApiLog` 切面日志。 |
 
@@ -268,6 +270,58 @@ curl -H "X-Request-Id: trace-001" http://localhost:8080/users/1
 ```java
 String requestId = RequestIdHolder.currentRequestId();
 ```
+
+请求进入 Servlet 过滤器链时，starter 会自动把 requestId 写入 SLF4J MDC：
+
+| MDC Key | 来源 |
+| --- | --- |
+| `requestId` | `X-Request-Id` 请求头或自动生成的 UUID |
+
+因此一次请求中的 Controller、Service、DAO 等日志都会带上同一个 requestId。响应也会回写 `X-Request-Id`，方便客户端和服务端日志互相对齐。
+
+## Logback 默认配置
+
+starter 内置 `logback-spring.xml`，业务应用引入 starter 后，如果没有自定义 `logback.xml` 或 `logback-spring.xml`，会自动使用默认配置。
+
+默认日志格式：
+
+```text
+yyyy-MM-dd HH:mm:ss.SSS LEVEL [thread] [requestId] logger - message
+```
+
+默认输出：
+
+| Appender | 说明 |
+| --- | --- |
+| `CONSOLE` | 控制台日志。 |
+| `FILE` | 文件日志，默认写入 `logs/${spring.application.name}.log`。 |
+
+文件日志按天滚动，每天一个归档文件，默认保留 180 天：
+
+```text
+logs/2026-06-10/${spring.application.name}.log.2026-06-10.log
+```
+
+可通过以下配置调整日志目录、文件名和保留时间：
+
+```yaml
+spring:
+  application:
+    name: demo-service
+
+logging:
+  file:
+    path: logs
+    name: demo-service.log
+
+zeus:
+  logging:
+    file:
+      max-history: 180
+      total-size-cap: 20GB
+```
+
+如果业务应用需要完全自定义日志，只需在业务应用中提供自己的 `logback-spring.xml` 或 `logback.xml`。
 
 ## 接口日志
 

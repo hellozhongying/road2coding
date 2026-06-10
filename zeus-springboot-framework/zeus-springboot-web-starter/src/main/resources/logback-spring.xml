@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="60 seconds">
+    <!-- 引入 starter 内置 logback 模板；业务应用没有自定义 logback 配置时会自动使用。 -->
+    <include resource="META-INF/zeus/logback/logback-spring-template.xml"/>
+</configuration>

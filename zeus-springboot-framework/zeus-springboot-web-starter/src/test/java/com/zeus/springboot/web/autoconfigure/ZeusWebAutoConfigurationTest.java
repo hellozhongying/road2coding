@@ -6,6 +6,7 @@ import com.zeus.springboot.web.exception.CommonErrorCode;
 import com.zeus.springboot.web.exception.GlobalExceptionHandler;
 import com.zeus.springboot.web.exception.ParamException;
 import com.zeus.springboot.web.log.ApiLogAspect;
+import com.zeus.springboot.web.log.RequestIdMdcFilter;
 import com.zeus.springboot.web.response.ResponseWrapAdvice;
 import com.zeus.springboot.web.response.Result;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,11 @@ class ZeusWebAutoConfigurationTest {
     @Test
     void createsGlobalExceptionHandler() {
         contextRunner.run(context -> assertThat(context).hasSingleBean(GlobalExceptionHandler.class));
+    }
+
+    @Test
+    void createsRequestIdMdcFilter() {
+        contextRunner.run(context -> assertThat(context).hasSingleBean(RequestIdMdcFilter.class));
     }
 
     @Test

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<included>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- 支持通过 Spring 配置覆盖默认日志目录、文件名、保留天数和总容量。 -->
+    <springProperty scope="context" name="APP_NAME" source="spring.application.name" defaultValue="application"/>
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue="logs"/>
+    <springProperty scope="context" name="LOG_FILE_NAME" source="logging.file.name" defaultValue="${APP_NAME}.log"/>
+    <springProperty scope="context" name="LOG_MAX_HISTORY" source="zeus.logging.file.max-history" defaultValue="180"/>
+    <springProperty scope="context" name="LOG_TOTAL_SIZE_CAP" source="zeus.logging.file.total-size-cap" defaultValue="20GB"/>
+    <springProperty scope="context" name="CONSOLE_LOG_LEVEL" source="logging.level.root" defaultValue="INFO"/>
+
+    <!-- %X{requestId:-} 从 MDC 读取 requestId，实现单次请求的日志链路追踪。 -->
+    <property name="ZEUS_LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] [%X{requestId:-}] %logger{36} - %msg%n"/>
+
+    <!-- 控制台日志，便于本地开发和容器标准输出采集。 -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${ZEUS_LOG_PATTERN}</pattern>
+            <charset>${CONSOLE_LOG_CHARSET}</charset>
+        </encoder>
+    </appender>
+
+    <!-- 文件日志：当天写入当前文件，跨天后归档到对应日期目录。 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${LOG_FILE_NAME}</file>
+        <encoder>
+            <pattern>${ZEUS_LOG_PATTERN}</pattern>
+            <charset>${FILE_LOG_CHARSET}</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- 按天滚动存储，默认保留 180 天，可通过 zeus.logging.file.max-history 调整。 -->
+            <fileNamePattern>${LOG_PATH}/%d{yyyy-MM-dd}/${LOG_FILE_NAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>${LOG_MAX_HISTORY}</maxHistory>
+            <totalSizeCap>${LOG_TOTAL_SIZE_CAP}</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <root level="${CONSOLE_LOG_LEVEL}">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</included>

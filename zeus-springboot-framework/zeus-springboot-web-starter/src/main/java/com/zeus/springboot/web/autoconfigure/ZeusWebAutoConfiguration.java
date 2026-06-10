@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeus.springboot.web.core.ZeusWebMarker;
 import com.zeus.springboot.web.exception.GlobalExceptionHandler;
 import com.zeus.springboot.web.log.ApiLogAspect;
+import com.zeus.springboot.web.log.RequestIdMdcFilter;
 import com.zeus.springboot.web.response.ResponseWrapAdvice;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -31,6 +32,13 @@ public class ZeusWebAutoConfiguration {
     @ConditionalOnMissingBean
     public GlobalExceptionHandler globalExceptionHandler() {
         return new GlobalExceptionHandler();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RequestIdMdcFilter requestIdMdcFilter() {
+        // 提前把 requestId 放入 MDC，保证业务日志和 @ApiLog 日志使用同一个追踪标识。
+        return new RequestIdMdcFilter();
     }
 
     @Bean
