@@ -28,7 +28,7 @@ mvn clean install
 <dependency>
     <groupId>io.github.hellozhongying</groupId>
     <artifactId>zeus-springboot-web-starter</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
 </dependency>
 ```
 
