@@ -11,10 +11,15 @@ import com.zeus.springboot.web.response.ResponseWrapAdvice;
 import com.zeus.springboot.web.response.Result;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
-import org.springframework.mock.env.MockEnvironment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.env.MockEnvironment;
+
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,6 +30,9 @@ class ZeusWebAutoConfigurationTest {
 
     private final WebApplicationContextRunner contextRunner = new WebApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of(ZeusWebAutoConfiguration.class));
+
+    private final WebApplicationContextRunner jacksonContextRunner = new WebApplicationContextRunner()
+            .withConfiguration(AutoConfigurations.of(JacksonAutoConfiguration.class, ZeusWebAutoConfiguration.class));
 
     @Test
     void createsMarkerBeanByDefault() {
@@ -77,6 +85,18 @@ class ZeusWebAutoConfigurationTest {
     }
 
     @Test
+    void configuresGlobalJsonDateTimeFormatWithShanghaiTimeZone() {
+        jacksonContextRunner.run(context -> {
+            ObjectMapper objectMapper = context.getBean(ObjectMapper.class);
+
+            assertThat(objectMapper.writeValueAsString(new Date(0L))).isEqualTo("\"1970-01-01 08:00:00\"");
+            assertThat(objectMapper.writeValueAsString(Instant.EPOCH)).isEqualTo("\"1970-01-01 08:00:00\"");
+            assertThat(objectMapper.writeValueAsString(LocalDateTime.of(2026, 6, 11, 9, 8, 7)))
+                    .isEqualTo("\"2026-06-11 09:08:07\"");
+        });
+    }
+
+    @Test
     void handlesParamExceptionWithErrorCode() {
         GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
@@ -89,6 +109,18 @@ class ZeusWebAutoConfigurationTest {
         assertThat(response.getBody().data()).isNull();
         assertThat(response.getBody().requestId()).isNotBlank();
         assertThat(response.getBody().timestamp()).isNotNull();
+    }
+
+    @Test
+    void handlesParamExceptionWithCustomMessage() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
+        ResponseEntity<Result<Void>> response = handler.handleParamException(
+                new ParamException(CommonErrorCode.PARAM_ERROR, "请勿重复提交"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().code()).isEqualTo("400");
+        assertThat(response.getBody().message()).isEqualTo("请勿重复提交");
     }
 
     @Test

@@ -189,9 +189,17 @@ zeus:
     api-log:
       max-length: 1000
       mask-text: "***"
+    no-repeat-submit:
+      enabled: true
+      key-prefix: zeus:web:no-repeat-submit
+      interval: 5
+      message: 请勿重复提交
+      include-params: true
+      user-identify-header: X-User-Id
+      include-client-ip: true
 ```
 
-关闭统一响应包装和接口日志切面：
+关闭统一响应包装、接口日志切面和防重复提交切面：
 
 ```yaml
 zeus:
@@ -236,7 +244,7 @@ zeus:
     "name": "Zeus"
   },
   "requestId": "9b97fb72-78a2-48b3-a9b2-7e52d37cda2e",
-  "timestamp": "2026-06-10T08:00:00Z"
+  "timestamp": "2026-06-10 16:00:00"
 }
 ```
 
@@ -248,7 +256,9 @@ zeus:
 | `message` | 响应消息。成功固定为 `success`。 |
 | `data` | 业务返回数据。 |
 | `requestId` | 请求 ID，来自 `X-Request-Id` 请求头或自动生成的 UUID。 |
-| `timestamp` | 响应创建时间。 |
+| `timestamp` | 响应创建时间，JSON 输出统一为 `yyyy-MM-dd HH:mm:ss`，时区固定为亚洲上海时区。 |
+
+starter 会为 Spring Boot 默认 `ObjectMapper` 注册全局 JSON 时间配置。后端对象中的 `java.util.Date`、`java.time.LocalDateTime`、`java.time.Instant`、`java.time.OffsetDateTime` 和 `java.time.ZonedDateTime` 返回给前端时，统一输出为 `yyyy-MM-dd HH:mm:ss`。
 
 示例 Controller：
 
@@ -337,7 +347,7 @@ starter 内置以下异常处理规则：
   "message": "参数错误",
   "data": null,
   "requestId": "9b97fb72-78a2-48b3-a9b2-7e52d37cda2e",
-  "timestamp": "2026-06-10T08:00:00Z"
+  "timestamp": "2026-06-10 16:00:00"
 }
 ```
 
