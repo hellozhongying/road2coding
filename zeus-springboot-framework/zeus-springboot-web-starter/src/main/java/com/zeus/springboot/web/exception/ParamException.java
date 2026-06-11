@@ -19,7 +19,25 @@ public class ParamException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    public ParamException(ErrorCode errorCode, String message) {
+        super(message);
+        this.errorCode = new MessageOverrideErrorCode(errorCode, message);
+    }
+
     public ErrorCode getErrorCode() {
         return errorCode;
+    }
+
+    private record MessageOverrideErrorCode(ErrorCode delegate, String message) implements ErrorCode {
+
+        @Override
+        public String getCode() {
+            return delegate.getCode();
+        }
+
+        @Override
+        public String getMessage() {
+            return message;
+        }
     }
 }

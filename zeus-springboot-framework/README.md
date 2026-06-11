@@ -50,6 +50,7 @@ mvn clean install
 | 日志追踪 | 自动将 requestId 写入 MDC，日志格式默认输出 requestId，便于按请求追踪日志链路。 |
 | 接口日志 | 通过 `@ApiLog` 记录接口名称、客户端 IP、请求参数、返回结果、耗时和异常。 |
 | 日志脱敏与限长 | 通过 `@LogMask` 标记敏感字段，接口日志默认替换为 `***`，单段日志值默认最多输出 1000 字符。 |
+| 防重复提交 | 通过 `@NoRepeatSubmit` 基于 Redis 原子写入短期提交凭证，拦截时间窗口内的重复提交。 |
 | Redis 对象 JSON 序列化 | 业务项目引入 Redis 组件时，默认 `RedisTemplate` 支持对象 JSON 存取。 |
 | HTTP Client | 默认提供基于 Spring `RestClient` 和 Apache HttpClient 5 的连接池 HTTP 客户端，并内置简单 GET/POST 工具类。 |
 | 常用工具依赖 | 内置 `commons-lang3`、`commons-collections4`、`commons-io` 和 `guava`，覆盖字符串、集合、IO 与 Guava 增强工具。 |
@@ -64,6 +65,7 @@ Web 自动配置仅在 Servlet Web 应用中生效，并要求 classpath 中存�
 com.zeus.springboot.web.autoconfigure.ZeusWebAutoConfiguration
 com.zeus.springboot.web.autoconfigure.ZeusRedisAutoConfiguration
 com.zeus.springboot.web.autoconfigure.ZeusHttpClientAutoConfiguration
+com.zeus.springboot.web.autoconfigure.ZeusNoRepeatSubmitAutoConfiguration
 ```
 
 自动装配的 Bean 包括：
@@ -75,6 +77,7 @@ com.zeus.springboot.web.autoconfigure.ZeusHttpClientAutoConfiguration
 | `RequestIdMdcFilter` | 缺失同类型 Bean 时创建 | 将请求 ID 写入 MDC，并回写 `X-Request-Id` 响应头。 |
 | `ResponseWrapAdvice` | 存在 `ObjectMapper`，且 `zeus.web.enabled=true` 时创建 | 提供统一响应包装。 |
 | `ApiLogAspect` | 存在 `ObjectMapper`，且 `zeus.web.enabled=true` 时创建 | 提供 `@ApiLog` 切面日志。 |
+| `NoRepeatSubmitAspect` | 存在 `ObjectMapper` 和 `StringRedisTemplate`，且 `zeus.web.enabled=true`、`zeus.web.no-repeat-submit.enabled=true` 时创建 | 提供 `@NoRepeatSubmit` 防重复提交。 |
 | `CloseableHttpClient` | 缺失名为 `zeusCloseableHttpClient` 的 Bean 时创建 | 提供 Apache HttpClient 5 连接池客户端。 |
 | `ClientHttpRequestFactory` | 缺失名为 `zeusClientHttpRequestFactory` 的 Bean 时创建 | 将 Apache HttpClient 5 接入 Spring HTTP 调用。 |
 | `RestClient` | 缺失名为 `zeusRestClient` 的 Bean 时创建 | 提供 starter 默认同步 HTTP 客户端。 |
@@ -164,6 +167,13 @@ private RestClient zeusRestClient;
 | `zeus.web.response-wrap.exclude-paths` | `List<String>` | 空列表 | 跳过统一响应包装的 Ant 风格路径，例如 `/actuator/**`。 |
 | `zeus.web.api-log.max-length` | `int` | `1000` | `@ApiLog` 单条日志消息的最大长度，同时限制请求参数或响应结果的序列化长度。配置小于等于 0 时回退为 1000。 |
 | `zeus.web.api-log.mask-text` | `String` | `***` | `@LogMask` 标记字段在接口日志中的替换文本。空值会回退为 `***`。 |
+| `zeus.web.no-repeat-submit.enabled` | `boolean` | `true` | 是否启用 `@NoRepeatSubmit` 防重复提交切面。 |
+| `zeus.web.no-repeat-submit.key-prefix` | `String` | `zeus:web:no-repeat-submit` | Redis 防重 key 前缀。 |
+| `zeus.web.no-repeat-submit.interval` | `long` | `5` | 注解未指定 `interval` 时使用的默认防重窗口，单位秒。 |
+| `zeus.web.no-repeat-submit.message` | `String` | `请勿重复提交` | 注解未指定 `message` 时使用的默认提示信息。 |
+| `zeus.web.no-repeat-submit.include-params` | `boolean` | `true` | 是否默认把请求参数摘要纳入防重 key。 |
+| `zeus.web.no-repeat-submit.user-identify-header` | `String` | `X-User-Id` | 请求头中的用户标识名称；存在该请求头时优先按用户维度生成防重 key。 |
+| `zeus.web.no-repeat-submit.include-client-ip` | `boolean` | `true` | 未取到用户标识时，是否把客户端 IP 纳入防重 key。 |
 
 示例：
 
