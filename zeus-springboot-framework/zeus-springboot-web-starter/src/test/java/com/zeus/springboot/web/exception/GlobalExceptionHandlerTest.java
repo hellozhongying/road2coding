@@ -24,7 +24,7 @@ class GlobalExceptionHandlerTest {
 
         ResponseEntity<Result<Void>> response = handler.handleException(exception);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().code()).isEqualTo("500");
         assertThat(response.getBody().message()).isEqualTo("系统异常");
         assertThat(output)

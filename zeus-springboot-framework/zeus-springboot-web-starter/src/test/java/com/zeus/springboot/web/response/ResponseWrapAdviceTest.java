@@ -83,7 +83,7 @@ class ResponseWrapAdviceTest {
     @Test
     void exceptionResponseIsResult() throws Exception {
         mockMvc.perform(get("/param-error"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("400"))
                 .andExpect(jsonPath("$.message").value("参数错误"))
                 .andExpect(jsonPath("$.data", nullValue()))
@@ -104,7 +104,7 @@ class ResponseWrapAdviceTest {
         validatingMockMvc.perform(post("/validate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"\"}"))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("400"))
                 .andExpect(jsonPath("$.message").value("参数错误"))
                 .andExpect(jsonPath("$.data", nullValue()))

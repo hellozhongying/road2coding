@@ -332,14 +332,14 @@ starter 内置以下异常处理规则：
 
 | 异常类型 | HTTP 状态码 | 响应错误码来源 |
 | --- | --- | --- |
-| `ParamException` | `400 Bad Request` | 异常中携带的 `ErrorCode` |
-| `MethodArgumentNotValidException` | `400 Bad Request` | `CommonErrorCode.PARAM_ERROR` |
-| `BindException` | `400 Bad Request` | `CommonErrorCode.PARAM_ERROR` |
-| `ConstraintViolationException` | `400 Bad Request` | `CommonErrorCode.PARAM_ERROR` |
-| `ServiceException` | `500 Internal Server Error` | 异常中携带的 `ErrorCode` |
-| 其他 `Exception` | `500 Internal Server Error` | `CommonErrorCode.SYSTEM_ERROR` |
+| `ParamException` | `200 OK` | 异常中携带的 `ErrorCode` |
+| `MethodArgumentNotValidException` | `200 OK` | `CommonErrorCode.PARAM_ERROR` |
+| `BindException` | `200 OK` | `CommonErrorCode.PARAM_ERROR` |
+| `ConstraintViolationException` | `200 OK` | `CommonErrorCode.PARAM_ERROR` |
+| `ServiceException` | `200 OK` | 异常中携带的 `ErrorCode` |
+| 其他 `Exception` | `200 OK` | `CommonErrorCode.SYSTEM_ERROR` |
 
-异常响应结构与普通响应一致，`data` 为 `null`：
+异常响应始终返回 HTTP 200，业务方通过 `Result.code` 判断是否成功，响应结构与普通响应一致，`data` 为 `null`：
 
 ```json
 {
