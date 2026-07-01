@@ -9,6 +9,10 @@ public class ServiceException extends RuntimeException {
 
     private final ErrorCode errorCode;
 
+    public ServiceException(String message) {
+        this(CommonErrorCode.SERVICE_ERROR, message);
+    }
+
     public ServiceException(ErrorCode errorCode) {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
@@ -19,7 +23,25 @@ public class ServiceException extends RuntimeException {
         this.errorCode = errorCode;
     }
 
+    public ServiceException(ErrorCode errorCode, String message) {
+        super(message);
+        this.errorCode = new MessageOverrideErrorCode(errorCode, message);
+    }
+
     public ErrorCode getErrorCode() {
         return errorCode;
+    }
+
+    private record MessageOverrideErrorCode(ErrorCode delegate, String message) implements ErrorCode {
+
+        @Override
+        public String getCode() {
+            return delegate.getCode();
+        }
+
+        @Override
+        public String getMessage() {
+            return message;
+        }
     }
 }

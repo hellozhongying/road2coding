@@ -5,6 +5,7 @@ import com.zeus.springboot.web.core.ZeusWebMarker;
 import com.zeus.springboot.web.exception.CommonErrorCode;
 import com.zeus.springboot.web.exception.GlobalExceptionHandler;
 import com.zeus.springboot.web.exception.ParamException;
+import com.zeus.springboot.web.exception.ServiceException;
 import com.zeus.springboot.web.log.ApiLogAspect;
 import com.zeus.springboot.web.log.RequestIdMdcFilter;
 import com.zeus.springboot.web.response.ResponseWrapAdvice;
@@ -121,6 +122,30 @@ class ZeusWebAutoConfigurationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().code()).isEqualTo("400");
         assertThat(response.getBody().message()).isEqualTo("请勿重复提交");
+    }
+
+    @Test
+    void handlesParamExceptionWithDefaultErrorCodeAndCustomMessage() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
+        ResponseEntity<Result<Void>> response = handler.handleParamException(
+                new ParamException("用户名不能为空"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().code()).isEqualTo("400");
+        assertThat(response.getBody().message()).isEqualTo("用户名不能为空");
+    }
+
+    @Test
+    void handlesServiceExceptionWithDefaultErrorCodeAndCustomMessage() {
+        GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
+        ResponseEntity<Result<Void>> response = handler.handleServiceException(
+                new ServiceException("订单支付失败"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getBody().code()).isEqualTo("500");
+        assertThat(response.getBody().message()).isEqualTo("订单支付失败");
     }
 
     @Test

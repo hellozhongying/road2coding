@@ -9,6 +9,10 @@ public class ParamException extends RuntimeException {
 
     private final ErrorCode errorCode;
 
+    public ParamException(String message) {
+        this(CommonErrorCode.PARAM_ERROR, message);
+    }
+
     public ParamException(ErrorCode errorCode) {
         super(errorCode.getMessage());
         this.errorCode = errorCode;

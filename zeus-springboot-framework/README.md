@@ -396,12 +396,24 @@ if (user == null) {
 }
 ```
 
+如果只是参数校验失败且不需要自定义错误码，可以直接使用默认参数错误码并覆盖提示信息：
+
+```java
+throw new ParamException("用户名不能为空");
+```
+
 ```java
 try {
     orderService.pay(orderId);
 } catch (Exception ex) {
     throw new ServiceException(BizErrorCode.ORDER_STATUS_INVALID, ex);
 }
+```
+
+服务异常也可以直接使用默认服务错误码并覆盖提示信息：
+
+```java
+throw new ServiceException("订单支付失败");
 ```
 
 ## 请求 ID
