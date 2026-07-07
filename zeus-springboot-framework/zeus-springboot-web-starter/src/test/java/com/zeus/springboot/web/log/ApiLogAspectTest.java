@@ -1,11 +1,15 @@
 package com.zeus.springboot.web.log;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zeus.springboot.web.annotation.ApiLog;
 import com.zeus.springboot.web.annotation.LogMask;
 import com.zeus.springboot.web.autoconfigure.ZeusWebProperties;
 import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.Signature;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.aspectj.lang.reflect.SourceLocation;
+import org.aspectj.runtime.internal.AroundClosure;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,8 +23,6 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 /**
  * 验证 API 日志切面的请求/响应记录、客户端 IP 解析和敏感字段脱敏。
@@ -29,6 +31,8 @@ import static org.mockito.Mockito.when;
 class ApiLogAspectTest {
 
     private final ApiLogAspect aspect = new ApiLogAspect(new ObjectMapper());
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @AfterEach
     void resetRequestAttributes() {
@@ -43,15 +47,10 @@ class ApiLogAspectTest {
         RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
 
         Method method = TestController.class.getMethod("query", String.class);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
-        when(joinPoint.getArgs()).thenReturn(new Object[]{"zeus"});
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.proceed()).thenReturn(Map.of("name", "zeus"));
-        when(signature.getMethod()).thenReturn(method);
 
         // 通过 CapturedOutput 直接检查日志内容，确保切面输出包含排查问题所需的关键字段。
-        Object result = aspect.logApi(joinPoint, method.getAnnotation(ApiLog.class));
+        Object result = aspect.logApi(joinPoint(method, new Object[]{"zeus"}, Map.of("name", "zeus")),
+                method.getAnnotation(ApiLog.class));
 
         assertThat(result).isEqualTo(Map.of("name", "zeus"));
         assertThat(output).contains("name=Query API");
@@ -62,26 +61,40 @@ class ApiLogAspectTest {
     }
 
     @Test
+    void logsJsonNodeRequestBody(CapturedOutput output) throws Throwable {
+        JsonNode node = objectMapper.readTree("""
+                {
+                  "username": "zeus",
+                  "role": "admin"
+                }
+                """);
+        Method method = TestController.class.getMethod("saveJsonNode", JsonNode.class);
+
+        aspect.logApi(joinPoint(method, new Object[]{node}, Map.of("ok", true)), method.getAnnotation(ApiLog.class));
+
+        assertThat(output).contains("name=Save JsonNode");
+        assertThat(output).contains("parameters=[{\"username\":\"zeus\",\"role\":\"admin\"}]");
+    }
+
+    @Test
     void masksAnnotatedFieldsAndTruncatesLongLogValues(CapturedOutput output) throws Throwable {
         ZeusWebProperties properties = new ZeusWebProperties();
         properties.getApiLog().setMaxLength(1000);
         ApiLogAspect maskedAspect = new ApiLogAspect(new ObjectMapper(), properties);
 
         Method method = TestController.class.getMethod("save", SaveUserRequest.class);
-        ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-        MethodSignature signature = mock(MethodSignature.class);
         SaveUserRequest request = new SaveUserRequest("zeus", "secret-token", "x".repeat(1200));
-        when(joinPoint.getArgs()).thenReturn(new Object[]{request});
-        when(joinPoint.getSignature()).thenReturn(signature);
-        when(joinPoint.proceed()).thenReturn(request);
-        when(signature.getMethod()).thenReturn(method);
 
         // token 被 @LogMask 标记，应在入参与返回值日志中同时脱敏。
-        maskedAspect.logApi(joinPoint, method.getAnnotation(ApiLog.class));
+        maskedAspect.logApi(joinPoint(method, new Object[]{request}, request), method.getAnnotation(ApiLog.class));
 
         assertThat(output).contains("\"token\":\"***\"");
         assertThat(output).doesNotContain("secret-token");
         assertThat(output).doesNotContain("x".repeat(1001));
+    }
+
+    private ProceedingJoinPoint joinPoint(Method method, Object[] args, Object result) {
+        return new TestProceedingJoinPoint(method, args, result);
     }
 
     static class TestController {
@@ -94,6 +107,11 @@ class ApiLogAspectTest {
         @ApiLog("Save User")
         public SaveUserRequest save(SaveUserRequest request) {
             return request;
+        }
+
+        @ApiLog("Save JsonNode")
+        public Map<String, Boolean> saveJsonNode(JsonNode node) {
+            return Map.of("ok", node.has("username"));
         }
     }
 
@@ -122,6 +140,136 @@ class ApiLogAspectTest {
 
         public String getDescription() {
             return description;
+        }
+    }
+
+    private record TestProceedingJoinPoint(Method method, Object[] args, Object result) implements ProceedingJoinPoint {
+
+        @Override
+        public Object proceed() {
+            return result;
+        }
+
+        @Override
+        public Object proceed(Object[] args) {
+            return result;
+        }
+
+        @Override
+        public void set$AroundClosure(AroundClosure aroundClosure) {
+        }
+
+        @Override
+        public Object getThis() {
+            return null;
+        }
+
+        @Override
+        public Object getTarget() {
+            return null;
+        }
+
+        @Override
+        public Object[] getArgs() {
+            return args;
+        }
+
+        @Override
+        public Signature getSignature() {
+            return new TestMethodSignature(method);
+        }
+
+        @Override
+        public SourceLocation getSourceLocation() {
+            return null;
+        }
+
+        @Override
+        public String getKind() {
+            return METHOD_EXECUTION;
+        }
+
+        @Override
+        public StaticPart getStaticPart() {
+            return null;
+        }
+
+        @Override
+        public String toShortString() {
+            return method.getName();
+        }
+
+        @Override
+        public String toLongString() {
+            return method.toString();
+        }
+
+        @Override
+        public String toString() {
+            return method.toString();
+        }
+    }
+
+    private record TestMethodSignature(Method method) implements MethodSignature {
+
+        @Override
+        public Class<?> getReturnType() {
+            return method.getReturnType();
+        }
+
+        @Override
+        public Method getMethod() {
+            return method;
+        }
+
+        @Override
+        public Class<?>[] getParameterTypes() {
+            return method.getParameterTypes();
+        }
+
+        @Override
+        public String[] getParameterNames() {
+            return new String[method.getParameterCount()];
+        }
+
+        @Override
+        public Class<?>[] getExceptionTypes() {
+            return method.getExceptionTypes();
+        }
+
+        @Override
+        public String getName() {
+            return method.getName();
+        }
+
+        @Override
+        public int getModifiers() {
+            return method.getModifiers();
+        }
+
+        @Override
+        public Class<?> getDeclaringType() {
+            return method.getDeclaringClass();
+        }
+
+        @Override
+        public String getDeclaringTypeName() {
+            return method.getDeclaringClass().getName();
+        }
+
+        @Override
+        public String toShortString() {
+            return method.getName();
+        }
+
+        @Override
+        public String toLongString() {
+            return method.toString();
+        }
+
+        @Override
+        public String toString() {
+            return method.toString();
         }
     }
 }

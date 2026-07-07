@@ -38,6 +38,9 @@ class LogValueSanitizer {
         if (value == null || isSimpleValue(value)) {
             return value;
         }
+        if (value instanceof JsonNode jsonNode) {
+            return jsonNode.deepCopy();
+        }
         if (visited.containsKey(value)) {
             // 对象图存在循环引用时停止递归，避免日志序列化栈溢出。
             return String.valueOf(value);
