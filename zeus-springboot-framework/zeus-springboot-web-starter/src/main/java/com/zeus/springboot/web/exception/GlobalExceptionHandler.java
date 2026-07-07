@@ -1,10 +1,11 @@
 package com.zeus.springboot.web.exception;
 
-import com.zeus.springboot.web.response.RequestIdHolder;
 import com.zeus.springboot.web.response.Result;
+import com.zeus.springboot.web.log.RequestIdMdcFilter;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -21,10 +22,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ParamException.class)
     public ResponseEntity<Result<Void>> handleParamException(ParamException exception) {
-        String requestId = RequestIdHolder.currentRequestId();
+        String requestId = MDC.get(RequestIdMdcFilter.REQUEST_ID_MDC_KEY);
         log.warn("Parameter exception handled, requestId={}, code={}, message={}",
                 requestId, exception.getErrorCode().getCode(), exception.getErrorCode().getMessage());
-        return buildResponse(exception.getErrorCode(), requestId);
+        return buildResponse(exception.getErrorCode());
     }
 
     @ExceptionHandler({
@@ -34,10 +35,10 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<Result<Void>> handleValidationException(Exception exception) {
         // Bean Validation 校验失败属于客户端参数错误，统一沿用 PARAM_ERROR 对外响应。
-        String requestId = RequestIdHolder.currentRequestId();
+        String requestId = MDC.get(RequestIdMdcFilter.REQUEST_ID_MDC_KEY);
         log.warn("Validation exception handled, requestId={}, message={}",
                 requestId, exception.getMessage());
-        return buildResponse(CommonErrorCode.PARAM_ERROR, requestId);
+        return buildResponse(CommonErrorCode.PARAM_ERROR);
     }
 
     /**
@@ -45,11 +46,11 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ServiceException.class)
     public ResponseEntity<Result<Void>> handleServiceException(ServiceException exception) {
-        String requestId = RequestIdHolder.currentRequestId();
+        String requestId = MDC.get(RequestIdMdcFilter.REQUEST_ID_MDC_KEY);
         log.error("Service exception handled, requestId={}, code={}, message={}",
                 requestId, exception.getErrorCode().getCode(),
                 exception.getErrorCode().getMessage(), exception);
-        return buildResponse(exception.getErrorCode(), requestId);
+        return buildResponse(exception.getErrorCode());
     }
 
     /**
@@ -57,13 +58,13 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<Void>> handleException(Exception exception) {
-        String requestId = RequestIdHolder.currentRequestId();
+        String requestId = MDC.get(RequestIdMdcFilter.REQUEST_ID_MDC_KEY);
         log.error("Unhandled exception handled by global exception handler, requestId={}",
                 requestId, exception);
-        return buildResponse(CommonErrorCode.SYSTEM_ERROR, requestId);
+        return buildResponse(CommonErrorCode.SYSTEM_ERROR);
     }
 
-    private ResponseEntity<Result<Void>> buildResponse(ErrorCode errorCode, String requestId) {
-        return ResponseEntity.ok(Result.failure(errorCode, requestId));
+    private ResponseEntity<Result<Void>> buildResponse(ErrorCode errorCode) {
+        return ResponseEntity.ok(Result.failure(errorCode));
     }
 }

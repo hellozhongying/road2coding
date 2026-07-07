@@ -279,7 +279,7 @@ public class UserController {
 ```java
 @GetMapping("/raw-result")
 public Result<String> rawResult() {
-    return Result.success("ok", RequestIdHolder.currentRequestId());
+    return Result.success("ok");
 }
 ```
 
@@ -365,19 +365,19 @@ starter 内置以下异常处理规则：
 
 ```java
 public enum BizErrorCode implements ErrorCode {
-    USER_NOT_FOUND("A0001", "用户不存在"),
-    ORDER_STATUS_INVALID("B0001", "订单状态不正确");
+    USER_NOT_FOUND(404, "用户不存在"),
+    ORDER_STATUS_INVALID(409, "订单状态不正确");
 
-    private final String code;
+    private final int code;
     private final String message;
 
-    BizErrorCode(String code, String message) {
+    BizErrorCode(int code, String message) {
         this.code = code;
         this.message = message;
     }
 
     @Override
-    public String getCode() {
+    public int getCode() {
         return code;
     }
 

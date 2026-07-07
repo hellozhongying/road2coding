@@ -35,7 +35,7 @@ public class ParamException extends RuntimeException {
     private record MessageOverrideErrorCode(ErrorCode delegate, String message) implements ErrorCode {
 
         @Override
-        public String getCode() {
+        public int getCode() {
             return delegate.getCode();
         }
 

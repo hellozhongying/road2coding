@@ -62,7 +62,7 @@ public class ResponseWrapAdvice implements ResponseBodyAdvice<Object> {
             return body;
         }
 
-        Result<Object> result = Result.success(body, RequestIdHolder.currentRequestId());
+        Result<Object> result = Result.success(body);
         if (StringHttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
             try {
                 // StringHttpMessageConverter 只能写字符串，这里手动转 JSON 并修正响应类型。

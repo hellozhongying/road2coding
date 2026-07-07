@@ -105,10 +105,10 @@ class ZeusWebAutoConfigurationTest {
                 new ParamException(CommonErrorCode.PARAM_ERROR));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().code()).isEqualTo("400");
+        assertThat(response.getBody().code()).isEqualTo(400);
         assertThat(response.getBody().message()).isEqualTo("参数错误");
         assertThat(response.getBody().data()).isNull();
-        assertThat(response.getBody().requestId()).isNotBlank();
+        assertThat(response.getBody().requestId()).isNull();
         assertThat(response.getBody().timestamp()).isNotNull();
     }
 
@@ -120,7 +120,7 @@ class ZeusWebAutoConfigurationTest {
                 new ParamException(CommonErrorCode.PARAM_ERROR, "请勿重复提交"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().code()).isEqualTo("400");
+        assertThat(response.getBody().code()).isEqualTo(400);
         assertThat(response.getBody().message()).isEqualTo("请勿重复提交");
     }
 
@@ -132,7 +132,7 @@ class ZeusWebAutoConfigurationTest {
                 new ParamException("用户名不能为空"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().code()).isEqualTo("400");
+        assertThat(response.getBody().code()).isEqualTo(400);
         assertThat(response.getBody().message()).isEqualTo("用户名不能为空");
     }
 
@@ -144,7 +144,7 @@ class ZeusWebAutoConfigurationTest {
                 new ServiceException("订单支付失败"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().code()).isEqualTo("500");
+        assertThat(response.getBody().code()).isEqualTo(500);
         assertThat(response.getBody().message()).isEqualTo("订单支付失败");
     }
 

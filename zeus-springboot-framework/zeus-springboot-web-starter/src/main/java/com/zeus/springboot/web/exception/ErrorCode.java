@@ -8,7 +8,7 @@ public interface ErrorCode {
     /**
      * 返回对外暴露的业务错误码。
      */
-    String getCode();
+    int getCode();
 
     /**
      * 返回对外暴露的错误提示信息。

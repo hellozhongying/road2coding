@@ -6,6 +6,7 @@ import com.zeus.springboot.web.autoconfigure.ZeusWebProperties;
 import com.zeus.springboot.web.exception.CommonErrorCode;
 import com.zeus.springboot.web.exception.GlobalExceptionHandler;
 import com.zeus.springboot.web.exception.ParamException;
+import com.zeus.springboot.web.log.RequestIdMdcFilter;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.Test;
@@ -36,13 +37,14 @@ class ResponseWrapAdviceTest {
     private final MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new TestController())
             .setControllerAdvice(new ResponseWrapAdvice(new ObjectMapper().findAndRegisterModules()),
                     new GlobalExceptionHandler())
+            .addFilters(new RequestIdMdcFilter())
             .build();
 
     @Test
     void wrapsObjectResponse() throws Exception {
         mockMvc.perform(get("/object").header(RequestIdHolder.REQUEST_ID_HEADER, "request-1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("0"))
+                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.message").value("success"))
                 .andExpect(jsonPath("$.data.name").value("zeus"))
                 .andExpect(jsonPath("$.requestId").value("request-1"))
@@ -55,7 +57,7 @@ class ResponseWrapAdviceTest {
         mockMvc.perform(get("/string"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.code").value("0"))
+                .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data").value("zeus"));
     }
 
@@ -73,6 +75,7 @@ class ResponseWrapAdviceTest {
         MockMvc excludedMockMvc = MockMvcBuilders.standaloneSetup(new TestController())
                 .setControllerAdvice(new ResponseWrapAdvice(new ObjectMapper().findAndRegisterModules(), properties),
                         new GlobalExceptionHandler())
+                .addFilters(new RequestIdMdcFilter())
                 .build();
 
         excludedMockMvc.perform(get("/actuator/health"))
@@ -84,7 +87,7 @@ class ResponseWrapAdviceTest {
     void exceptionResponseIsResult() throws Exception {
         mockMvc.perform(get("/param-error"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("400"))
+                .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("参数错误"))
                 .andExpect(jsonPath("$.data", nullValue()))
                 .andExpect(jsonPath("$.requestId", notNullValue()))
@@ -99,13 +102,14 @@ class ResponseWrapAdviceTest {
                 .setControllerAdvice(new ResponseWrapAdvice(new ObjectMapper().findAndRegisterModules()),
                         new GlobalExceptionHandler())
                 .setValidator(validator)
+                .addFilters(new RequestIdMdcFilter())
                 .build();
 
         validatingMockMvc.perform(post("/validate")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("400"))
+                .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("参数错误"))
                 .andExpect(jsonPath("$.data", nullValue()))
                 .andExpect(jsonPath("$.requestId", notNullValue()))
