@@ -40,21 +40,28 @@ public record Result<T>(int code, String message, T data, String requestId, Inst
     /**
      * 构造失败响应，默认错误码为 500。
      */
-    public static Result<Void> error(String message) {
+    public static <T> Result<T> error(String message) {
+        return failure(message);
+    }
+
+    /**
+     * 构造失败响应，默认错误码为 500。
+     */
+    public static <T> Result<T> failure(String message) {
         return failure(ERROR_CODE, message);
     }
 
     /**
      * 根据错误码构造失败响应。
      */
-    public static Result<Void> failure(ErrorCode errorCode) {
+    public static <T> Result<T> failure(ErrorCode errorCode) {
         return failure(errorCode.getCode(), errorCode.getMessage());
     }
 
     /**
      * 根据明确的错误码和提示信息构造失败响应。
      */
-    public static Result<Void> failure(int code, String message) {
+    public static <T> Result<T> failure(int code, String message) {
         return new Result<>(code, message, null, currentRequestId(), Instant.now());
     }
 

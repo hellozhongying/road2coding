@@ -62,6 +62,25 @@ class ResponseWrapAdviceTest {
     }
 
     @Test
+    void skipsWrappingWhenControllerReturnsTypedResultSuccess() throws Exception {
+        mockMvc.perform(get("/user"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("success"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.name").value("Zeus"));
+    }
+
+    @Test
+    void skipsWrappingWhenControllerReturnsTypedResultFailure() throws Exception {
+        mockMvc.perform(get("/user-missing"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(500))
+                .andExpect(jsonPath("$.message").value("获取用户失败"))
+                .andExpect(jsonPath("$.data", nullValue()));
+    }
+
+    @Test
     void skipsWrappingWhenAnnotated() throws Exception {
         mockMvc.perform(get("/raw"))
                 .andExpect(status().isOk())
@@ -129,6 +148,16 @@ class ResponseWrapAdviceTest {
             return "zeus";
         }
 
+        @GetMapping("/user")
+        Result<UserResponse> user() {
+            return Result.success(new UserResponse(1L, "Zeus"));
+        }
+
+        @GetMapping("/user-missing")
+        Result<UserResponse> userMissing() {
+            return Result.failure("获取用户失败");
+        }
+
         @IgnoreResponseWrap
         @GetMapping("/raw")
         String raw() {
@@ -152,5 +181,8 @@ class ResponseWrapAdviceTest {
     }
 
     record CreateUserRequest(@NotBlank String name) {
+    }
+
+    record UserResponse(Long id, String name) {
     }
 }

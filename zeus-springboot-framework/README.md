@@ -237,7 +237,7 @@ zeus:
 
 ```json
 {
-  "code": "0",
+  "code": 200,
   "message": "success",
   "data": {
     "id": 1,
@@ -252,7 +252,7 @@ zeus:
 
 | 字段 | 说明 |
 | --- | --- |
-| `code` | 响应码。成功固定为 `0`。 |
+| `code` | 响应码。成功固定为 `200`。 |
 | `message` | 响应消息。成功固定为 `success`。 |
 | `data` | 业务返回数据。 |
 | `requestId` | 请求 ID，来自 `X-Request-Id` 请求头或自动生成的 UUID。 |
@@ -280,6 +280,19 @@ public class UserController {
 @GetMapping("/raw-result")
 public Result<String> rawResult() {
     return Result.success("ok");
+}
+```
+
+也可以显式返回带业务对象泛型的 `Result<T>`，失败时 `data` 会返回 `null`：
+
+```java
+@GetMapping("/{id}")
+public Result<UserDetail> getUser(@PathVariable Long id) {
+    UserDetail user = userService.getUser(id);
+    if (user == null) {
+        return Result.failure("获取用户失败");
+    }
+    return Result.success(user);
 }
 ```
 

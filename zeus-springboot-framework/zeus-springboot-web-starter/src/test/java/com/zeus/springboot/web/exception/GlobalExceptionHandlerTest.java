@@ -50,6 +50,15 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void resultFailureMessageCanBeAssignedToTypedResult() {
+        Result<UserResponse> result = Result.failure("获取用户失败");
+
+        assertThat(result.code()).isEqualTo(500);
+        assertThat(result.message()).isEqualTo("获取用户失败");
+        assertThat(result.data()).isNull();
+    }
+
+    @Test
     void resultOkUsesDefaultCodeAndMdcRequestId() {
         MDC.put(RequestIdMdcFilter.REQUEST_ID_MDC_KEY, "ok-request");
         try {
@@ -62,5 +71,8 @@ class GlobalExceptionHandlerTest {
         } finally {
             MDC.remove(RequestIdMdcFilter.REQUEST_ID_MDC_KEY);
         }
+    }
+
+    record UserResponse(Long id, String name) {
     }
 }
